@@ -296,9 +296,14 @@ export function Workspace() {
         body: JSON.stringify({ sourceText: data.sourceText })
       })
         .then(async (res) => {
-          const cleanData = await res.json() as { cleanedText?: string };
-          if (cleanData.cleanedText) setSourceText(cleanData.cleanedText);
-          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\uff0cAI \u5df2\u81ea\u52a8\u4fee\u590d\u4e71\u7801\u3002`);
+          if (!res.ok) throw new Error("clean failed");
+          const text = await res.text();
+          if (!text) throw new Error("empty response");
+          const cleanData = JSON.parse(text) as { cleanedText?: string; mode?: string };
+          if (cleanData.cleanedText && cleanData.mode !== "passthrough") {
+            setSourceText(cleanData.cleanedText);
+          }
+          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
         })
         .catch(() => {
           setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
