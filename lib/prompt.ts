@@ -32,7 +32,9 @@ ${profile.promptDirectives.map((item) => "- " + item).join("\n")}
 - summary：用形象比喻概括，保留公式的完整性和美观
 ${spatialInstructions[profileType || "spatial"]}
 - keyConcepts：数组，每项含 name, description, relation。按材料关键主题数量
-- 公式用 LaTeX 格式（如 $E=mc^2$），保持可读
+- 公式和符号用美观的 LaTeX 书写（如 $E = mc^{2}$、$\frac{a}{b}$、$\sqrt{x}$、$\sum_{i=1}^{n}$），加适当空格
+- 化学式用 LaTeX（如 $\mathrm{H_2O}$、$\mathrm{CO_2}$）
+- 重要公式单独成行，用 $$ ... $$ 展示，类似手写板书风格
 - 所有内容保持完整，不要截断或省略
 
 学习目标：${focusGoal?.trim() || "建立可回忆的知识结构"}

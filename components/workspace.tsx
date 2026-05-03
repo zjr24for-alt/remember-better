@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 
 import { FloorPlan } from "@/components/floor-plan";
+import { RenderMath } from "@/components/render-math";
 
 import { MemoryAssessment } from "@/components/memory-assessment";
 import { SpatialDiagram } from "@/components/spatial-diagram";
@@ -586,8 +587,8 @@ export function Workspace() {
                     {uiText.currentVersion}
                   </span>
                 </div>
-                <h4 className="mt-1 min-w-0 break-words font-display text-2xl leading-tight text-ink">{draft.title}</h4>
-                <p className="mt-3 min-w-0 break-words text-sm leading-7 text-ink/72">{draft.summary}</p>
+                <h4 className="mt-1 min-w-0 break-words font-display text-2xl leading-tight text-ink"><RenderMath text={draft.title} /></h4>
+                <p className="mt-3 min-w-0 break-words text-sm leading-7 text-ink/72"><RenderMath text={draft.summary} /></p>
               </section>
 
               <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
@@ -659,9 +660,7 @@ export function Workspace() {
                         {index + 1}
                       </span>
                       <div className="min-w-0 rounded-[1rem] border border-fog/60 bg-gradient-to-br from-white to-paper/80 px-4 py-3.5 shadow-sm transition hover:shadow-md">
-                        <p className="break-words text-sm leading-7 text-ink/78">
-                          {step}
-                        </p>
+                        <p className="break-words text-sm leading-7 text-ink/78"><RenderMath text={step} /></p>
                       </div>
                     </div>
                   ))}
@@ -698,11 +697,11 @@ export function Workspace() {
                       >
                         <div className={"h-0.5 w-full " + accentBar[ci]} />
                         <div className="px-5 py-4">
-                          <h5 className="min-w-0 break-words font-semibold text-ink">{item.name}</h5>
+                          <h5 className="min-w-0 break-words font-semibold text-ink"><RenderMath text={item.name} /></h5>
                           <span className={"mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold " + tagStyle[ci]}>
                             {item.relation}
                           </span>
-                          <p className="mt-2.5 min-w-0 break-words text-sm leading-7 text-ink/72">{item.description}</p>
+                          <p className="mt-2.5 min-w-0 break-words text-sm leading-7 text-ink/72"><RenderMath text={item.description} /></p>
                         </div>
                       </article>
                     );
