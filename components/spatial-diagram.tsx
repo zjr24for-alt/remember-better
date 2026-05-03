@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RenderMath } from "@/components/render-math";
 
 type Props = {
   spatialMapMarkdown: string;
@@ -75,7 +76,7 @@ export function SpatialDiagram({ spatialMapMarkdown, title }: Props) {
                       <span className={"flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white " + c.bar}>
                         {i + 1}
                       </span>
-                      <span className="font-semibold text-ink text-sm">{zone.title}</span>
+                      <span className="font-semibold text-ink text-sm"><RenderMath text={zone.title} /></span>
                     </div>
                   </div>
                   {zone.items.length > 0 && (
@@ -86,7 +87,7 @@ export function SpatialDiagram({ spatialMapMarkdown, title }: Props) {
                             key={j}
                             className={"rounded-full border px-3 py-1 text-xs " + c.badge}
                           >
-                            {item}
+                            <RenderMath text={item} />
                           </span>
                         ))}
                       </div>

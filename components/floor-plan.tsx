@@ -18,10 +18,19 @@ const PALETTE = [
 ];
 
 function smartTruncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
+  // Clean LaTeX markers for canvas display
+  let t = text
+    .replace(/\$\$([^$]+)\$\$/g, "$1")
+    .replace(/\$([^$]+)\$/g, "$1")
+    .replace(/\\mathrm\{([^}]+)\}/g, "$1")
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "$1/$2")
+    .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
+    .replace(/\\sum_\{([^}]+)\}\^\{([^}]+)\}/g, "Σ[$1→$2]")
+    .replace(/\\([a-zA-Z]+)/g, "$1");
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
   const lastPeriod = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("，"), cut.lastIndexOf("、"), cut.lastIndexOf("；"), cut.lastIndexOf(" "));
-  if (lastPeriod > max * 0.4) return text.slice(0, lastPeriod + 1) + "…";
+  if (lastPeriod > max * 0.4) return t.slice(0, lastPeriod + 1) + "…";
   return cut + "…";
 }
 
