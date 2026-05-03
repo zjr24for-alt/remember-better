@@ -265,26 +265,61 @@ export function Workspace() {
     setUploadingFileName(file.name);
 
     try {
-      setStatusMessage("正在用 PaddleOCR 识别文件...");
+      let text = "";
 
-      const ocrRes = await fetch("http://localhost:8787/ocr", {
-        method: "POST",
-        body: file,
-        headers: { "Content-Type": file.type || "application/pdf" }
-      });
+      // 1) Try local PaddleOCR server first (best quality)
+      try {
+        setStatusMessage("正在用 PaddleOCR 识别...");
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3000);
+        const ocrRes = await fetch("http://localhost:8787/ocr", {
+          method: "POST",
+          body: file,
+          headers: { "Content-Type": file.type || "application/pdf" },
+          signal: ctrl.signal
+        });
+        clearTimeout(t);
+        if (ocrRes.ok) {
+          const d = await ocrRes.json() as { text?: string };
+          if (d.text) text = d.text;
+        }
+      } catch { /* PaddleOCR not available */ }
 
-      if (!ocrRes.ok) {
-        throw new Error("PaddleOCR 服务未启动，请运行 scripts/ocr_server.py");
+      // 2) Fallback: Tesseract.js in-browser OCR
+      if (!text && (file.type.startsWith("image/") || file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i))) {
+        setStatusMessage("正在用浏览器 OCR 识别...");
+        const Tesseract = (await import("tesseract.js")).default;
+        const imgUrl = URL.createObjectURL(file);
+        try {
+          const result = await Tesseract.recognize(imgUrl, "chi_sim+eng", {
+            logger: (m) => {
+              if (m.status === "recognizing text") {
+                setStatusMessage(`OCR 进度: ${Math.round(m.progress * 100)}%`);
+              }
+            }
+          });
+          text = result.data.text?.trim() || "";
+        } finally {
+          URL.revokeObjectURL(imgUrl);
+        }
       }
 
-      const ocrData = await ocrRes.json() as { text?: string; error?: string };
-      if (ocrData.error) throw new Error(ocrData.error);
-      const text = ocrData.text || "";
+      // 3) Last resort: server extract (PDF/PPTX)
+      if (!text) {
+        setStatusMessage("正在尝试服务器解析...");
+        const fd = new FormData();
+        fd.append("file", file);
+        const sr = await fetch("/api/extract", { method: "POST", body: fd });
+        if (sr.ok) {
+          const d = await sr.json() as { sourceText?: string };
+          if (d.sourceText) text = d.sourceText;
+        }
+      }
 
-      if (!text) throw new Error("PaddleOCR 未识别到文字");
+      if (!text) throw new Error("未识别到文字内容");
 
       setSourceText(text);
-      setStatusMessage(`已识别 ${file.name}，正在 AI 清洗文本...`);
+      setStatusMessage(`已识别 ${file.name}，正在 AI 清洗...`);
 
       // Auto-clean
       fetch("/api/clean-text", {
@@ -294,9 +329,9 @@ export function Workspace() {
       })
         .then(async (res) => {
           if (res.ok) {
-            const txt = await res.text();
-            if (txt) {
-              const d = JSON.parse(txt) as { cleanedText?: string; mode?: string };
+            const r = await res.text();
+            if (r) {
+              const d = JSON.parse(r) as { cleanedText?: string; mode?: string };
               if (d.cleanedText && d.mode !== "passthrough") setSourceText(d.cleanedText);
             }
           }
