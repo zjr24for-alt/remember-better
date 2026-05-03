@@ -160,7 +160,7 @@ function splitNarrative(text: string): string[] {
 }
 
 export function Workspace() {
-  const [sourceText, setSourceText] = useState(starterText);
+  const [sourceText, setSourceText] = useState("");
   const [focusGoal, setFocusGoal] = useState(
     "\u51c6\u5907\u8003\u8bd5\uff0c\u5e76\u5c3d\u5feb\u8bb0\u4f4f\u6838\u5fc3\u7269\u7406\u6982\u5ff5\u3002"
   );
@@ -459,26 +459,37 @@ export function Workspace() {
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/10 text-xs">📝</span>
                 {uiText.sourceMaterial}
               </span>
-              {sourceText.trim() && (
-                <button
-                  type="button"
-                  onClick={onCleanText}
-                  disabled={isCleaningText}
-                  className="inline-flex items-center gap-1 rounded-full border border-fog/60 bg-white px-3 py-1 text-xs font-semibold text-ink/45 shadow-sm transition-all hover:border-accent/40 hover:text-accent disabled:opacity-50"
-                >
-                  {isCleaningText ? (
-                    <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-ink" /> 修复中…</>
-                  ) : (
-                    <>🪄 AI 修正乱码</>
-                  )}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {!sourceText.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSourceText(starterText)}
+                    className="inline-flex items-center gap-1 rounded-full border border-fog/50 bg-white/80 px-3 py-1 text-xs text-ink/35 transition-all hover:border-accent/30 hover:text-accent"
+                  >
+                    使用示例
+                  </button>
+                )}
+                {sourceText.trim() && (
+                  <button
+                    type="button"
+                    onClick={onCleanText}
+                    disabled={isCleaningText}
+                    className="inline-flex items-center gap-1 rounded-full border border-fog/60 bg-white px-3 py-1 text-xs font-semibold text-ink/45 shadow-sm transition-all hover:border-accent/40 hover:text-accent disabled:opacity-50"
+                  >
+                    {isCleaningText ? (
+                      <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-ink" /> 修复中…</>
+                    ) : (
+                      <>🪄 AI 修正乱码</>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
             <textarea
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
-              className="min-h-[300px] w-full max-w-full resize-y overflow-auto rounded-[1.5rem] border border-fog/60 bg-white px-5 py-4 text-sm leading-7 outline-none ring-0 transition-all placeholder:text-ink/30 focus:border-accent focus:ring-2 focus:ring-accent/10"
-              placeholder={uiText.sourcePlaceholder}
+              className="min-h-[300px] w-full max-w-full resize-y overflow-auto rounded-[1.5rem] border border-fog/60 bg-white px-5 py-4 text-sm leading-7 outline-none ring-0 transition-all placeholder:text-ink/25 placeholder:italic focus:border-accent focus:ring-2 focus:ring-accent/10"
+              placeholder={starterText.slice(0, 120) + "…（点击上方「使用示例」填入完整示例，或直接粘贴课件内容）"}
             />
           </label>
 
