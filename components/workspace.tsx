@@ -3,6 +3,27 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { FloorPlan } from "@/components/floor-plan";
+
+// Load pdf.js from CDN to avoid bundler issues
+let pdfjsPromise: Promise<unknown> | null = null;
+function loadPdfJsFromCDN() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.onload = () => {
+        const lib = (window as unknown as Record<string, unknown>).pdfjsLib as Record<string, unknown>;
+        (lib as Record<string, string>).GlobalWorkerOptions = {
+          workerSrc: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+        } as unknown as string;
+        resolve(lib);
+      };
+      script.onerror = () => reject(new Error("PDF.js 加载失败"));
+      document.head.appendChild(script);
+    });
+  }
+  return pdfjsPromise;
+}
 import { MemoryAssessment } from "@/components/memory-assessment";
 import { SpatialDiagram } from "@/components/spatial-diagram";
 import { SpatialFlow } from "@/components/spatial-flow";
@@ -285,34 +306,57 @@ export function Workspace() {
         }
       } catch { /* PaddleOCR not available */ }
 
-      // 2) Fallback: Tesseract.js in-browser OCR
-      if (!text && (file.type.startsWith("image/") || file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i))) {
+      // 2) Tesseract.js browser OCR — works everywhere
+      if (!text) {
         setStatusMessage("正在用浏览器 OCR 识别...");
         const Tesseract = (await import("tesseract.js")).default;
-        const imgUrl = URL.createObjectURL(file);
-        try {
-          const result = await Tesseract.recognize(imgUrl, "chi_sim+eng", {
-            logger: (m) => {
-              if (m.status === "recognizing text") {
-                setStatusMessage(`OCR 进度: ${Math.round(m.progress * 100)}%`);
-              }
-            }
-          });
-          text = result.data.text?.trim() || "";
-        } finally {
-          URL.revokeObjectURL(imgUrl);
-        }
-      }
+        const imageUrls: string[] = [];
 
-      // 3) Last resort: server extract (PDF/PPTX)
-      if (!text) {
-        setStatusMessage("正在尝试服务器解析...");
-        const fd = new FormData();
-        fd.append("file", file);
-        const sr = await fetch("/api/extract", { method: "POST", body: fd });
-        if (sr.ok) {
-          const d = await sr.json() as { sourceText?: string };
-          if (d.sourceText) text = d.sourceText;
+        if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+          // Render PDF pages to images in browser (pdf.js from CDN)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pdfjsLib = await loadPdfJsFromCDN() as any;
+          const buf = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+          const totalPages = Math.min(pdf.numPages, 10);
+          for (let i = 1; i <= totalPages; i++) {
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({ scale: 2 });
+            const c = document.createElement("canvas");
+            c.width = vp.width;
+            c.height = vp.height;
+            const ctx = c.getContext("2d");
+            if (!ctx) continue;
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            imageUrls.push(c.toDataURL("image/png"));
+            setStatusMessage(`PDF 渲染中... ${i}/${totalPages}`);
+          }
+        } else if (file.type.startsWith("image/") || file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i)) {
+          imageUrls.push(URL.createObjectURL(file));
+        } else {
+          // PPTX etc — try server
+          const fd = new FormData();
+          fd.append("file", file);
+          const sr = await fetch("/api/extract", { method: "POST", body: fd });
+          if (sr.ok) {
+            const d = await sr.json() as { sourceText?: string };
+            if (d.sourceText) text = d.sourceText;
+          }
+        }
+
+        // OCR each rendered image
+        if (imageUrls.length > 0) {
+          const ocrTexts: string[] = [];
+          for (let i = 0; i < imageUrls.length; i++) {
+            const result = await Tesseract.recognize(imageUrls[i], "chi_sim+eng");
+            if (result.data.text?.trim()) ocrTexts.push(result.data.text.trim());
+            setStatusMessage(`OCR 识别中... ${i + 1}/${imageUrls.length}`);
+          }
+          text = ocrTexts.join("\n\n").trim();
+          for (const u of imageUrls) {
+            if (u.startsWith("blob:")) URL.revokeObjectURL(u);
+          }
         }
       }
 
