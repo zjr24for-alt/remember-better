@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { FloorPlan } from "@/components/floor-plan";
 import { MemoryAssessment } from "@/components/memory-assessment";
@@ -167,7 +167,9 @@ export function Workspace() {
   const [history, setHistory] = useState<SavedGeneration[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageProvider, setImageProvider] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -252,6 +254,61 @@ export function Workspace() {
         setError(message);
       }
     });
+  };
+
+  const onUploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setStatusMessage(null);
+    setUploadingFileName(file.name);
+
+    try {
+      setStatusMessage("正在用 PaddleOCR 识别文件...");
+
+      const ocrRes = await fetch("http://localhost:8787/ocr", {
+        method: "POST",
+        body: file,
+        headers: { "Content-Type": file.type || "application/pdf" }
+      });
+
+      if (!ocrRes.ok) {
+        throw new Error("PaddleOCR 服务未启动，请运行 scripts/ocr_server.py");
+      }
+
+      const ocrData = await ocrRes.json() as { text?: string; error?: string };
+      if (ocrData.error) throw new Error(ocrData.error);
+      const text = ocrData.text || "";
+
+      if (!text) throw new Error("PaddleOCR 未识别到文字");
+
+      setSourceText(text);
+      setStatusMessage(`已识别 ${file.name}，正在 AI 清洗文本...`);
+
+      // Auto-clean
+      fetch("/api/clean-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceText: text })
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const txt = await res.text();
+            if (txt) {
+              const d = JSON.parse(txt) as { cleanedText?: string; mode?: string };
+              if (d.cleanedText && d.mode !== "passthrough") setSourceText(d.cleanedText);
+            }
+          }
+          setStatusMessage(`已识别 ${file.name}，AI 已修复乱码。`);
+        })
+        .catch(() => setStatusMessage(`已识别 ${file.name}。`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "识别失败");
+    } finally {
+      setUploadingFileName(null);
+      event.target.value = "";
+    }
   };
 
   const onCleanText = () => {
@@ -428,14 +485,37 @@ export function Workspace() {
             </div>
           )}
 
-          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm">
+          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm transition-shadow hover:shadow-md">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-sm">📂</span>
-              <span className="text-sm font-semibold text-ink">{uiText.importTitle}</span>
+              <span className="text-sm font-semibold text-ink">PaddleOCR 课件识别</span>
             </div>
             <p className="mt-2 text-sm leading-7 text-ink/50">
-              推荐用 <a href="https://aistudio.baidu.com/paddleocr" target="_blank" className="font-semibold text-accent underline">PaddleOCR 在线识别</a> 解析课件，复制结果粘贴到下方输入框。也可直接粘贴 Markdown 或纯文本。
+              上传 PDF / PPTX / 图片，本地 PaddleOCR 高精度识别后自动填入。需先启动 OCR 服务。
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept=".pdf,.pptx,.ppt,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={onUploadFile}
+              />
+              <button
+                type="button"
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={!!uploadingFileName}
+                className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-5 py-2.5 text-sm font-semibold text-accent transition-all hover:bg-accent hover:text-white hover:shadow-lg hover:shadow-accent/20 disabled:opacity-50"
+              >
+                <span>{uploadingFileName ? "⏳" : "📎"}</span>
+                {uploadingFileName ? "识别中..." : "选择课件文件"}
+              </button>
+              {!uploadingFileName && (
+                <span className="text-xs text-ink/35">
+                  需先运行 python scripts/ocr_server.py
+                </span>
+              )}
+            </div>
           </div>
 
           <label className="block space-y-2">
