@@ -470,18 +470,27 @@ export function Workspace() {
                   </button>
                 )}
                 {sourceText.trim() && (
-                  <button
-                    type="button"
-                    onClick={onCleanText}
-                    disabled={isCleaningText}
-                    className="inline-flex items-center gap-1 rounded-full border border-fog/60 bg-white px-3 py-1 text-xs font-semibold text-ink/45 shadow-sm transition-all hover:border-accent/40 hover:text-accent disabled:opacity-50"
-                  >
-                    {isCleaningText ? (
-                      <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-ink" /> 修复中…</>
-                    ) : (
-                      <>🪄 AI 修正乱码</>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setSourceText(""); setError(null); }}
+                      className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white/80 px-3 py-1 text-xs text-red-400 transition-all hover:border-red-300 hover:text-red-500"
+                    >
+                      ✕ 清空
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCleanText}
+                      disabled={isCleaningText}
+                      className="inline-flex items-center gap-1 rounded-full border border-fog/60 bg-white px-3 py-1 text-xs font-semibold text-ink/45 shadow-sm transition-all hover:border-accent/40 hover:text-accent disabled:opacity-50"
+                    >
+                      {isCleaningText ? (
+                        <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-ink" /> 修复中…</>
+                      ) : (
+                        <>🪄 AI 修正乱码</>
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -602,7 +611,7 @@ export function Workspace() {
                 <p className="mt-3 min-w-0 break-words text-sm leading-7 text-ink/72"><RenderMath text={draft.summary} /></p>
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-flow" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/10 text-sm">🧭</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -619,7 +628,7 @@ export function Workspace() {
                 />
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-spatial" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/10 text-sm">🗺️</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -654,7 +663,7 @@ export function Workspace() {
                 </div>
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-narrative" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moss/10 text-sm">🚶</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -678,7 +687,7 @@ export function Workspace() {
                 </div>
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-concepts" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-sm">🔗</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -720,7 +729,7 @@ export function Workspace() {
                 </div>
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-diagram" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-sm">🗂️</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -736,7 +745,7 @@ export function Workspace() {
                 />
               </section>
 
-              <section className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+              <section id="section-floorplan" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moss/10 text-sm">🏛️</span>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -1000,6 +1009,34 @@ export function Workspace() {
         </section>
       </div>
     </section>
+
+      {/* Floating section nav */}
+      {draft && (
+        <div className="fixed right-4 top-1/2 z-40 -translate-y-1/2 space-y-1.5 hidden xl:block">
+          {[
+            { id: "section-flow", icon: "🧭", label: "交互地图" },
+            { id: "section-spatial", icon: "🗺️", label: "空间预览" },
+            { id: "section-narrative", icon: "🚶", label: "叙事路线" },
+            { id: "section-concepts", icon: "🔗", label: "关键概念" },
+            { id: "section-diagram", icon: "🗂️", label: "结构图" },
+            { id: "section-floorplan", icon: "🏛️", label: "平面图" },
+          ].map(({ id, icon, label }) => (
+            <a
+              key={id}
+              href={"#" + id}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="flex items-center gap-2 rounded-full border border-fog/60 bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink/40 shadow-sm backdrop-blur transition-all hover:border-accent/40 hover:text-accent hover:shadow-md"
+              title={label}
+            >
+              <span className="text-sm">{icon}</span>
+              <span>{label}</span>
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Preview fullscreen modal */}
       {previewFull && draft && (
