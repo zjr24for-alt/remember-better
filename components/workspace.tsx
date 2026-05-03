@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { extractFileInBrowser } from "@/lib/extract-client";
 import { FloorPlan } from "@/components/floor-plan";
 import { MemoryAssessment } from "@/components/memory-assessment";
 import { SpatialDiagram } from "@/components/spatial-diagram";
@@ -267,47 +268,40 @@ export function Workspace() {
     setUploadingFileName(file.name);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // Client-side extraction for PDF and PPTX (works on Vercel!)
+      const data = await extractFileInBrowser(file);
 
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        body: formData
-      });
-
-      const data = (await response.json()) as ExtractResponse;
-      if (!response.ok) {
-        throw new Error(data.error || uiText.extractFailed);
-      }
-
-      setSourceText(data.sourceText);
+      setSourceText(data.text);
       const typeLabel =
         data.detectedType === "pdf"
           ? uiText.pdf
           : data.detectedType === "pptx"
             ? uiText.pptx
             : uiText.pptConverted;
-      setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002\u6b63\u5728 AI \u6e05\u6d17\u6587\u672c...`);
+      const fileName = file.name;
+      setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002\u6b63\u5728 AI \u6e05\u6d17\u6587\u672c...`);
 
       // Auto-clean extracted text
-      fetch("/api/clean-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceText: data.sourceText })
-      })
-        .then(async (res) => {
-          if (!res.ok) throw new Error("clean failed");
-          const text = await res.text();
-          if (!text) throw new Error("empty response");
-          const cleanData = JSON.parse(text) as { cleanedText?: string; mode?: string };
-          if (cleanData.cleanedText && cleanData.mode !== "passthrough") {
-            setSourceText(cleanData.cleanedText);
-          }
-          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
+      if (data.text) {
+        fetch("/api/clean-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sourceText: data.text })
         })
-        .catch(() => {
-          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
-        });
+          .then(async (res) => {
+            if (!res.ok) throw new Error("clean failed");
+            const txt = await res.text();
+            if (!txt) throw new Error("empty response");
+            const cleanData = JSON.parse(txt) as { cleanedText?: string; mode?: string };
+            if (cleanData.cleanedText && cleanData.mode !== "passthrough") {
+              setSourceText(cleanData.cleanedText);
+            }
+            setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\uff0cAI \u5df2\u81ea\u52a8\u4fee\u590d\u4e71\u7801\u3002`);
+          })
+          .catch(() => {
+            setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
+          });
+      }
     } catch (caughtError) {
       const message =
         caughtError instanceof Error ? caughtError.message : uiText.extractFailed;
