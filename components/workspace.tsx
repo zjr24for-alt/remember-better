@@ -1030,7 +1030,6 @@ export function Workspace() {
                 if (id === "workspace") {
                   const el = document.getElementById("workspace");
                   el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  setPreviewFull(true);
                 } else {
                   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
