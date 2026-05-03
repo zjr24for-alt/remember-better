@@ -394,8 +394,8 @@ export function Workspace() {
   return (
     <>
     <section className="space-y-8" id="workspace">
-      <div className="grid gap-6 rounded-[2rem] border border-white/80 bg-white/80 p-5 shadow-lg shadow-ink/5 backdrop-blur-sm md:grid-cols-[0.95fr_1.05fr] md:p-8">
-        <div className="space-y-5">
+      <div className="grid gap-6 rounded-[2rem] border border-white/80 bg-white/80 p-5 shadow-lg shadow-ink/5 backdrop-blur-sm md:grid-cols-2 md:p-8">
+        <div className="min-w-0 space-y-5">
           <div className="border-b border-fog/50 pb-5">
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3.5 py-1.5 text-xs font-semibold text-accent ring-1 ring-accent/10">
@@ -475,7 +475,7 @@ export function Workspace() {
             <textarea
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
-              className="min-h-[300px] w-full rounded-[1.5rem] border border-fog/60 bg-white px-5 py-4 text-sm leading-7 outline-none ring-0 transition-all placeholder:text-ink/30 focus:border-accent focus:ring-2 focus:ring-accent/10"
+              className="min-h-[300px] w-full max-w-full resize-y overflow-auto rounded-[1.5rem] border border-fog/60 bg-white px-5 py-4 text-sm leading-7 outline-none ring-0 transition-all placeholder:text-ink/30 focus:border-accent focus:ring-2 focus:ring-accent/10"
               placeholder={uiText.sourcePlaceholder}
             />
           </label>
