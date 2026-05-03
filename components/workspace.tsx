@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
-import { extractFileInBrowser } from "@/lib/extract-client";
 import { FloorPlan } from "@/components/floor-plan";
 import { MemoryAssessment } from "@/components/memory-assessment";
 import { SpatialDiagram } from "@/components/spatial-diagram";
@@ -159,7 +158,6 @@ function splitNarrative(text: string): string[] {
 }
 
 export function Workspace() {
-  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [sourceText, setSourceText] = useState(starterText);
   const [focusGoal, setFocusGoal] = useState(
     "\u51c6\u5907\u8003\u8bd5\uff0c\u5e76\u5c3d\u5feb\u8bb0\u4f4f\u6838\u5fc3\u7269\u7406\u6982\u5ff5\u3002"
@@ -170,7 +168,6 @@ export function Workspace() {
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageProvider, setImageProvider] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -255,83 +252,6 @@ export function Workspace() {
         setError(message);
       }
     });
-  };
-
-  const onUploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    setError(null);
-    setStatusMessage(null);
-    setUploadingFileName(file.name);
-
-    try {
-      let text = "";
-      let detectedType: "pdf" | "pptx" | "ppt" = "pdf";
-
-      // Try PaddleOCR first (local server only \u2014 much better quality)
-      try {
-        setStatusMessage("\u6b63\u5728\u7528 PaddleOCR \u8bc6\u522b\u6587\u4ef6...");
-        const formData = new FormData();
-        formData.append("file", file);
-        const ocrRes = await fetch("/api/ocr", { method: "POST", body: formData });
-        if (ocrRes.ok) {
-          const ocrData = await ocrRes.json() as { sourceText?: string; detectedType?: string; error?: string };
-          if (ocrData.sourceText && !ocrData.error) {
-            text = ocrData.sourceText;
-            detectedType = (ocrData.detectedType as "pdf" | "pptx" | "ppt") || "pdf";
-          }
-        }
-      } catch { /* OCR not available, fallback */ }
-
-      // Fallback to client-side extraction
-      if (!text) {
-        const data = await extractFileInBrowser(file);
-        text = data.text;
-        detectedType = data.detectedType;
-      }
-
-      setSourceText(text);
-      const typeLabel =
-        detectedType === "pdf"
-          ? uiText.pdf
-          : detectedType === "pptx"
-            ? uiText.pptx
-            : uiText.pptConverted;
-      const fileName = file.name;
-      setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002\u6b63\u5728 AI \u6e05\u6d17\u6587\u672c...`);
-
-      // Auto-clean extracted text
-      if (text) {
-        fetch("/api/clean-text", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceText: text })
-        })
-          .then(async (res) => {
-            if (!res.ok) throw new Error("clean failed");
-            const txt = await res.text();
-            if (!txt) throw new Error("empty response");
-            const cleanData = JSON.parse(txt) as { cleanedText?: string; mode?: string };
-            if (cleanData.cleanedText && cleanData.mode !== "passthrough") {
-              setSourceText(cleanData.cleanedText);
-            }
-            setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\uff0cAI \u5df2\u81ea\u52a8\u4fee\u590d\u4e71\u7801\u3002`);
-          })
-          .catch(() => {
-            setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
-          });
-      }
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error ? caughtError.message : uiText.extractFailed;
-      setError(message);
-    } finally {
-      setUploadingFileName(null);
-      event.target.value = "";
-    }
   };
 
   const onCleanText = () => {
@@ -508,34 +428,14 @@ export function Workspace() {
             </div>
           )}
 
-          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-sm">📂</span>
               <span className="text-sm font-semibold text-ink">{uiText.importTitle}</span>
             </div>
-            <p className="mt-2 text-sm leading-7 text-ink/50">{uiText.importBody}</p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <input
-                ref={uploadInputRef}
-                type="file"
-                accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                className="hidden"
-                onChange={onUploadFile}
-              />
-              <button
-                type="button"
-                onClick={() => uploadInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-5 py-2.5 text-sm font-semibold text-accent transition-all hover:bg-accent hover:text-white hover:shadow-lg hover:shadow-accent/20"
-              >
-                <span>{uploadingFileName ? "⏳" : "📎"}</span>
-                {uploadingFileName ? uiText.parsing : uiText.chooseFile}
-              </button>
-              <span className="text-xs text-ink/40">
-                {uploadingFileName
-                  ? `${uiText.parsingFile} ${uploadingFileName}`
-                  : uiText.pptHint}
-              </span>
-            </div>
+            <p className="mt-2 text-sm leading-7 text-ink/50">
+              推荐用 <a href="https://aistudio.baidu.com/paddleocr" target="_blank" className="font-semibold text-accent underline">PaddleOCR 在线识别</a> 解析课件，复制结果粘贴到下方输入框。也可直接粘贴 Markdown 或纯文本。
+            </p>
           </div>
 
           <label className="block space-y-2">
