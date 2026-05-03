@@ -591,7 +591,7 @@ export function Workspace() {
               </button>
               {!uploadingFileName && (
                 <span className="text-xs text-ink/35">
-                  需先运行 python scripts/ocr_server.py
+                  浏览器自动识别，无需额外操作
                 </span>
               )}
             </div>
