@@ -43,10 +43,10 @@ function parseZones(markdown: string): ZoneData[] {
     const line = rawLine.trim();
     if (!line) continue;
     if (line.startsWith("##")) {
-      current = { title: smartTruncate(line.replace(/^##+\s*/, ""), 36), items: [] };
+      current = { title: smartTruncate(line.replace(/^##+\s*/, ""), 48), items: [] };
       zones.push(current);
     } else if (current) {
-      const item = smartTruncate(line.replace(/^[-+*]\s*/, "").trim(), 32);
+      const item = smartTruncate(line.replace(/^[-+*]\s*/, "").trim(), 48);
       if (item) current.items.push(item);
     }
   }

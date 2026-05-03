@@ -29,9 +29,11 @@ ${profile.promptDirectives.map((item) => "- " + item).join("\n")}
 
 输出 JSON，字段：title, summary, spatialMapMarkdown, narrativeRoute, keyConcepts
 - title：${profile.label}风格的标题
-- summary：用形象比喻概括
+- summary：用形象比喻概括，保留公式的完整性和美观
 ${spatialInstructions[profileType || "spatial"]}
 - keyConcepts：数组，每项含 name, description, relation。按材料关键主题数量
+- 公式用 LaTeX 格式（如 $E=mc^2$），保持可读
+- 所有内容保持完整，不要截断或省略
 
 学习目标：${focusGoal?.trim() || "建立可回忆的知识结构"}
 

@@ -21,7 +21,7 @@ function smartTruncate(text: string, max: number): string {
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
   const lastPeriod = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("，"), cut.lastIndexOf("、"), cut.lastIndexOf("；"), cut.lastIndexOf(" "));
-  if (lastPeriod > max * 0.5) return text.slice(0, lastPeriod + 1) + "…";
+  if (lastPeriod > max * 0.4) return text.slice(0, lastPeriod + 1) + "…";
   return cut + "…";
 }
 
@@ -33,10 +33,10 @@ function parseRooms(markdown: string): Room[] {
     const line = raw.trim();
     if (!line) continue;
     if (line.startsWith("##")) {
-      cur = { title: smartTruncate(line.replace(/^##+\s*/, ""), 36), items: [] };
+      cur = { title: smartTruncate(line.replace(/^##+\s*/, ""), 48), items: [] };
       rooms.push(cur);
     } else if (cur) {
-      const item = smartTruncate(line.replace(/^[-+*]\s*/, "").trim(), 38);
+      const item = smartTruncate(line.replace(/^[-+*]\s*/, "").trim(), 52);
       if (item && cur.items.length < 5) cur.items.push(item);
     }
   }
