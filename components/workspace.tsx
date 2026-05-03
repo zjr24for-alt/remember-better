@@ -638,13 +638,13 @@ export function Workspace() {
                       <article className="min-w-0 rounded-[1rem] border border-fog/80 bg-gradient-to-br from-white to-paper px-5 py-4 shadow-sm transition hover:shadow-md">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 shrink-0 rounded-full bg-accent/70" />
-                          <h5 className="min-w-0 break-words font-semibold text-ink">{section.title}</h5>
+                          <h5 className="min-w-0 break-words font-semibold text-ink"><RenderMath text={section.title} /></h5>
                         </div>
                         <div className="mt-3 space-y-2.5">
                           {section.items.map((item, i) => (
                             <div key={i} className="flex gap-3 rounded-lg bg-paper/70 px-3 py-2 text-sm leading-7 text-ink/78">
                               <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-moss/60" />
-                              <span className="min-w-0 break-words">{item}</span>
+                              <span className="min-w-0 break-words"><RenderMath text={item} /></span>
                             </div>
                           ))}
                         </div>
@@ -1036,12 +1036,12 @@ export function Workspace() {
                       {index + 1}
                     </span>
                     <article className="rounded-[1rem] border border-fog/80 bg-gradient-to-br from-white to-paper px-6 py-5 shadow-sm">
-                      <h5 className="font-semibold text-ink text-lg">{section.title}</h5>
+                      <h5 className="font-semibold text-ink text-lg"><RenderMath text={section.title} /></h5>
                       <div className="mt-3 space-y-3">
                         {section.items.map((item, i) => (
                           <div key={i} className="flex gap-3 rounded-lg bg-paper/70 px-4 py-3 text-base leading-8 text-ink/78">
                             <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-moss/60" />
-                            <span>{item}</span>
+                            <span><RenderMath text={item} /></span>
                           </div>
                         ))}
                       </div>
