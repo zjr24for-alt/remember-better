@@ -268,25 +268,47 @@ export function Workspace() {
     setUploadingFileName(file.name);
 
     try {
-      // Client-side extraction for PDF and PPTX (works on Vercel!)
-      const data = await extractFileInBrowser(file);
+      let text = "";
+      let detectedType: "pdf" | "pptx" | "ppt" = "pdf";
 
-      setSourceText(data.text);
+      // Try PaddleOCR first (local server only \u2014 much better quality)
+      try {
+        setStatusMessage("\u6b63\u5728\u7528 PaddleOCR \u8bc6\u522b\u6587\u4ef6...");
+        const formData = new FormData();
+        formData.append("file", file);
+        const ocrRes = await fetch("/api/ocr", { method: "POST", body: formData });
+        if (ocrRes.ok) {
+          const ocrData = await ocrRes.json() as { sourceText?: string; detectedType?: string; error?: string };
+          if (ocrData.sourceText && !ocrData.error) {
+            text = ocrData.sourceText;
+            detectedType = (ocrData.detectedType as "pdf" | "pptx" | "ppt") || "pdf";
+          }
+        }
+      } catch { /* OCR not available, fallback */ }
+
+      // Fallback to client-side extraction
+      if (!text) {
+        const data = await extractFileInBrowser(file);
+        text = data.text;
+        detectedType = data.detectedType;
+      }
+
+      setSourceText(text);
       const typeLabel =
-        data.detectedType === "pdf"
+        detectedType === "pdf"
           ? uiText.pdf
-          : data.detectedType === "pptx"
+          : detectedType === "pptx"
             ? uiText.pptx
             : uiText.pptConverted;
       const fileName = file.name;
       setStatusMessage(`${uiText.imported} ${fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002\u6b63\u5728 AI \u6e05\u6d17\u6587\u672c...`);
 
       // Auto-clean extracted text
-      if (data.text) {
+      if (text) {
         fetch("/api/clean-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceText: data.text })
+          body: JSON.stringify({ sourceText: text })
         })
           .then(async (res) => {
             if (!res.ok) throw new Error("clean failed");
