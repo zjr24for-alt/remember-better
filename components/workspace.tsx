@@ -1020,15 +1020,25 @@ export function Workspace() {
             { id: "section-concepts", icon: "🔗", label: "关键概念" },
             { id: "section-diagram", icon: "🗂️", label: "结构图" },
             { id: "section-floorplan", icon: "🏛️", label: "平面图" },
+            { id: "workspace", icon: "⛶", label: "全屏预览" },
           ].map(({ id, icon, label }) => (
             <a
               key={id}
               href={"#" + id}
               onClick={(e) => {
                 e.preventDefault();
-                document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                if (id === "workspace") {
+                  const el = document.getElementById("workspace");
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  setPreviewFull(true);
+                } else {
+                  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
               }}
-              className="flex items-center gap-2 rounded-full border border-fog/60 bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink/40 shadow-sm backdrop-blur transition-all hover:border-accent/40 hover:text-accent hover:shadow-md"
+              className={"flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm backdrop-blur transition-all hover:shadow-md " +
+                (id === "workspace"
+                  ? "border-accent/30 bg-accent/5 text-accent hover:bg-accent/10"
+                  : "border-fog/60 bg-white/90 text-ink/40 hover:border-accent/40 hover:text-accent")}
               title={label}
             >
               <span className="text-sm">{icon}</span>
