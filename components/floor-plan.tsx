@@ -17,16 +17,39 @@ const PALETTE = [
   { fill: "#f3e8f2", stroke: "#9b5c8d", text: "#5a1a4d" },
 ];
 
-function smartTruncate(text: string, max: number): string {
-  // Clean LaTeX markers for canvas display
-  let t = text
-    .replace(/\$\$([^$]+)\$\$/g, "$1")
-    .replace(/\$([^$]+)\$/g, "$1")
+function cleanFormula(text: string): string {
+  return text
+    // Strip LaTeX entirely, keep the readable parts
+    .replace(/\$\$[^$]+\$\$/g, "")
+    .replace(/\$[^$]+\$/g, "")
+    // Replace LaTeX commands with plain equivalents
     .replace(/\\mathrm\{([^}]+)\}/g, "$1")
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "$1/$2")
     .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
-    .replace(/\\sum_\{([^}]+)\}\^\{([^}]+)\}/g, "Σ[$1→$2]")
-    .replace(/\\([a-zA-Z]+)/g, "$1");
+    .replace(/\\sum_/, "Σ")
+    .replace(/\\times/g, "×")
+    .replace(/\\cdot/g, "·")
+    .replace(/\\rightarrow/g, "→")
+    .replace(/\\alpha/g, "α")
+    .replace(/\\beta/g, "β")
+    .replace(/\\gamma/g, "γ")
+    .replace(/\\delta/g, "Δ")
+    .replace(/\\pi/g, "π")
+    .replace(/\\lambda/g, "λ")
+    .replace(/\\mu/g, "μ")
+    .replace(/\\sigma/g, "σ")
+    .replace(/\\theta/g, "θ")
+    .replace(/\\omega/g, "ω")
+    .replace(/\\infty/g, "∞")
+    .replace(/\^\{([^}]+)\}/g, "^$1")
+    .replace(/\_\{([^}]+)\}/g, "₍$1₎")
+    .replace(/[{}]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function smartTruncate(text: string, max: number): string {
+  let t = cleanFormula(text);
   if (t.length <= max) return t;
   const cut = t.slice(0, max);
   const lastPeriod = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("，"), cut.lastIndexOf("、"), cut.lastIndexOf("；"), cut.lastIndexOf(" "));
