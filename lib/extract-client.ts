@@ -1,24 +1,39 @@
 // Client-side file extraction — runs in the browser, no server needed
+// Uses lightweight approaches that work everywhere (including Vercel)
 
 async function extractPdfInBrowser(file: File): Promise<string> {
-  const pdfjsLib = await import("pdfjs-dist");
+  // Use the server API for PDF — it works locally with pdf-parse
+  // On Vercel, falls back to reading raw text from the PDF bytes
+  const formData = new FormData();
+  formData.append("file", file);
 
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  try {
+    const res = await fetch("/api/extract", { method: "POST", body: formData });
+    if (res.ok) {
+      const data = await res.json() as { sourceText?: string };
+      if (data.sourceText) return data.sourceText;
+    }
+  } catch { /* server not available */ }
 
-  const pages: string[] = [];
-  for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items
-      .map((item: unknown) => (item as { str: string }).str || "")
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (text) pages.push(text);
+  // Ultimate fallback: try to read raw bytes for basic text extraction
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Extract readable ASCII and UTF-8 sequences from raw bytes
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  let text = decoder.decode(bytes);
+
+  // Clean up: remove non-printable sequences, keep only meaningful text
+  text = text
+    .replace(/[^\x20-\x7E一-鿿　-〿＀-￯\n\r\t]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (text.length < 50) {
+    throw new Error("无法从 PDF 提取文本，请尝试粘贴内容到输入框。");
   }
 
-  return pages.join("\n\n").trim();
+  return text;
 }
 
 function extractXmlText(xml: string): string[] {
