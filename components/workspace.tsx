@@ -287,7 +287,22 @@ export function Workspace() {
           : data.detectedType === "pptx"
             ? uiText.pptx
             : uiText.pptConverted;
-      setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
+      setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002\u6b63\u5728 AI \u6e05\u6d17\u6587\u672c...`);
+
+      // Auto-clean extracted text
+      fetch("/api/clean-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceText: data.sourceText })
+      })
+        .then(async (res) => {
+          const cleanData = await res.json() as { cleanedText?: string };
+          if (cleanData.cleanedText) setSourceText(cleanData.cleanedText);
+          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\uff0cAI \u5df2\u81ea\u52a8\u4fee\u590d\u4e71\u7801\u3002`);
+        })
+        .catch(() => {
+          setStatusMessage(`${uiText.imported} ${data.fileName}\uff0c\u8bc6\u522b\u4e3a ${typeLabel}\u3002`);
+        });
     } catch (caughtError) {
       const message =
         caughtError instanceof Error ? caughtError.message : uiText.extractFailed;
