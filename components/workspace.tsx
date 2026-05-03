@@ -1,29 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { FloorPlan } from "@/components/floor-plan";
 
-// Load pdf.js from CDN to avoid bundler issues
-let pdfjsPromise: Promise<unknown> | null = null;
-function loadPdfJsFromCDN() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-      script.onload = () => {
-        const lib = (window as unknown as Record<string, unknown>).pdfjsLib as Record<string, unknown>;
-        (lib as Record<string, string>).GlobalWorkerOptions = {
-          workerSrc: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
-        } as unknown as string;
-        resolve(lib);
-      };
-      script.onerror = () => reject(new Error("PDF.js 加载失败"));
-      document.head.appendChild(script);
-    });
-  }
-  return pdfjsPromise;
-}
 import { MemoryAssessment } from "@/components/memory-assessment";
 import { SpatialDiagram } from "@/components/spatial-diagram";
 import { SpatialFlow } from "@/components/spatial-flow";
@@ -188,9 +168,7 @@ export function Workspace() {
   const [history, setHistory] = useState<SavedGeneration[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageProvider, setImageProvider] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -275,136 +253,6 @@ export function Workspace() {
         setError(message);
       }
     });
-  };
-
-  const onUploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setError(null);
-    setStatusMessage(null);
-    setUploadingFileName(file.name);
-
-    try {
-      let text = "";
-
-      // 1) Try local PaddleOCR server first (best quality)
-      try {
-        setStatusMessage("正在用 PaddleOCR 识别...");
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 3000);
-        const ocrRes = await fetch("http://localhost:8787/ocr", {
-          method: "POST",
-          body: file,
-          headers: { "Content-Type": file.type || "application/pdf" },
-          signal: ctrl.signal
-        });
-        clearTimeout(t);
-        if (ocrRes.ok) {
-          const d = await ocrRes.json() as { text?: string };
-          if (d.text) text = d.text;
-        }
-      } catch { /* PaddleOCR not available */ }
-
-      // 2) Extract text from file
-      if (!text) {
-        if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-          // First try pdf.js text extraction (fast — works for PDFs with text layer)
-          try {
-            setStatusMessage("正在提取 PDF 文字层...");
-            const pdfjsLib = await loadPdfJsFromCDN() as any;
-            const buf = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-
-            const pages: string[] = [];
-            const total = Math.min(pdf.numPages, 20);
-            for (let i = 1; i <= total; i++) {
-              const page = await pdf.getPage(i);
-              const content = await page.getTextContent();
-              const pageText = (content.items as Array<{ str?: string }>)
-                .map((item) => item.str || "")
-                .join(" ")
-                .replace(/\s+/g, " ")
-                .trim();
-              if (pageText) pages.push(pageText);
-              setStatusMessage(`提取文字 ${i}/${total}`);
-            }
-            text = pages.join("\n\n").trim();
-          } catch { /* fall through */ }
-
-          // If no text layer (scanned PDF), use OCR on just the first 3 pages
-          if (!text || text.length < 100) {
-            setStatusMessage("无文字层，启动 OCR（仅前 3 页）...");
-            const Tesseract = (await import("tesseract.js")).default;
-            const pdfjsLib = await loadPdfJsFromCDN() as any;
-            const buf2 = await file.arrayBuffer();
-            const pdf2 = await pdfjsLib.getDocument({ data: buf2 }).promise;
-
-            const ocrTexts: string[] = [];
-            const total = Math.min(pdf2.numPages, 3);
-            for (let i = 1; i <= total; i++) {
-              const page = await pdf2.getPage(i);
-              const vp = page.getViewport({ scale: 1.5 });
-              const c = document.createElement("canvas");
-              c.width = vp.width;
-              c.height = vp.height;
-              const ctx = c.getContext("2d");
-              if (!ctx) continue;
-              await page.render({ canvasContext: ctx, viewport: vp }).promise;
-              const imgUrl = c.toDataURL("image/jpeg", 0.7);
-              const result = await Tesseract.recognize(imgUrl, "chi_sim+eng");
-              if (result.data.text?.trim()) ocrTexts.push(result.data.text.trim());
-              setStatusMessage(`OCR ${i}/${total}`);
-            }
-            text = ocrTexts.join("\n\n").trim();
-          }
-        } else if (file.type.startsWith("image/") || file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i)) {
-          setStatusMessage("正在 OCR 识别图片...");
-          const Tesseract = (await import("tesseract.js")).default;
-          const imgUrl = URL.createObjectURL(file);
-          try {
-            const result = await Tesseract.recognize(imgUrl, "chi_sim+eng");
-            text = result.data.text?.trim() || "";
-          } finally { URL.revokeObjectURL(imgUrl); }
-        } else {
-          const fd = new FormData();
-          fd.append("file", file);
-          const sr = await fetch("/api/extract", { method: "POST", body: fd });
-          if (sr.ok) {
-            const d = await sr.json() as { sourceText?: string };
-            if (d.sourceText) text = d.sourceText;
-          }
-        }
-      }
-
-      if (!text) throw new Error("未识别到文字内容");
-
-      setSourceText(text);
-      setStatusMessage(`已识别 ${file.name}，正在 AI 清洗...`);
-
-      // Auto-clean
-      fetch("/api/clean-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceText: text })
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            const r = await res.text();
-            if (r) {
-              const d = JSON.parse(r) as { cleanedText?: string; mode?: string };
-              if (d.cleanedText && d.mode !== "passthrough") setSourceText(d.cleanedText);
-            }
-          }
-          setStatusMessage(`已识别 ${file.name}，AI 已修复乱码。`);
-        })
-        .catch(() => setStatusMessage(`已识别 ${file.name}。`));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "识别失败");
-    } finally {
-      setUploadingFileName(null);
-      event.target.value = "";
-    }
   };
 
   const onCleanText = () => {
@@ -581,37 +429,14 @@ export function Workspace() {
             </div>
           )}
 
-          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-br from-white via-white to-paper/60 p-5 shadow-sm">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-sm">📂</span>
-              <span className="text-sm font-semibold text-ink">PaddleOCR 课件识别</span>
+              <span className="text-sm font-semibold text-ink">导入课件</span>
             </div>
             <p className="mt-2 text-sm leading-7 text-ink/50">
-              上传 PDF / PPTX / 图片，本地 PaddleOCR 高精度识别后自动填入。需先启动 OCR 服务。
+              用 <a href="https://aistudio.baidu.com/paddleocr" target="_blank" className="font-semibold text-accent underline">PaddleOCR</a> 识别课件，复制结果粘贴到下方输入框。或直接粘贴文本。
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <input
-                ref={uploadInputRef}
-                type="file"
-                accept=".pdf,.pptx,.ppt,.png,.jpg,.jpeg"
-                className="hidden"
-                onChange={onUploadFile}
-              />
-              <button
-                type="button"
-                onClick={() => uploadInputRef.current?.click()}
-                disabled={!!uploadingFileName}
-                className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-5 py-2.5 text-sm font-semibold text-accent transition-all hover:bg-accent hover:text-white hover:shadow-lg hover:shadow-accent/20 disabled:opacity-50"
-              >
-                <span>{uploadingFileName ? "⏳" : "📎"}</span>
-                {uploadingFileName ? "识别中..." : "选择课件文件"}
-              </button>
-              {!uploadingFileName && (
-                <span className="text-xs text-ink/35">
-                  浏览器自动识别，无需额外操作
-                </span>
-              )}
-            </div>
           </div>
 
           <label className="block space-y-2">
