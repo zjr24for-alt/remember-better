@@ -306,56 +306,73 @@ export function Workspace() {
         }
       } catch { /* PaddleOCR not available */ }
 
-      // 2) Tesseract.js browser OCR — works everywhere
+      // 2) Extract text from file
       if (!text) {
-        setStatusMessage("正在用浏览器 OCR 识别...");
-        const Tesseract = (await import("tesseract.js")).default;
-        const imageUrls: string[] = [];
-
         if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-          // Render PDF pages to images in browser (pdf.js from CDN)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const pdfjsLib = await loadPdfJsFromCDN() as any;
-          const buf = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          // First try pdf.js text extraction (fast — works for PDFs with text layer)
+          try {
+            setStatusMessage("正在提取 PDF 文字层...");
+            const pdfjsLib = await loadPdfJsFromCDN() as any;
+            const buf = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
 
-          const totalPages = Math.min(pdf.numPages, 10);
-          for (let i = 1; i <= totalPages; i++) {
-            const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: 2 });
-            const c = document.createElement("canvas");
-            c.width = vp.width;
-            c.height = vp.height;
-            const ctx = c.getContext("2d");
-            if (!ctx) continue;
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            imageUrls.push(c.toDataURL("image/png"));
-            setStatusMessage(`PDF 渲染中... ${i}/${totalPages}`);
+            const pages: string[] = [];
+            const total = Math.min(pdf.numPages, 20);
+            for (let i = 1; i <= total; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const pageText = (content.items as Array<{ str?: string }>)
+                .map((item) => item.str || "")
+                .join(" ")
+                .replace(/\s+/g, " ")
+                .trim();
+              if (pageText) pages.push(pageText);
+              setStatusMessage(`提取文字 ${i}/${total}`);
+            }
+            text = pages.join("\n\n").trim();
+          } catch { /* fall through */ }
+
+          // If no text layer (scanned PDF), use OCR on just the first 3 pages
+          if (!text || text.length < 100) {
+            setStatusMessage("无文字层，启动 OCR（仅前 3 页）...");
+            const Tesseract = (await import("tesseract.js")).default;
+            const pdfjsLib = await loadPdfJsFromCDN() as any;
+            const buf2 = await file.arrayBuffer();
+            const pdf2 = await pdfjsLib.getDocument({ data: buf2 }).promise;
+
+            const ocrTexts: string[] = [];
+            const total = Math.min(pdf2.numPages, 3);
+            for (let i = 1; i <= total; i++) {
+              const page = await pdf2.getPage(i);
+              const vp = page.getViewport({ scale: 1.5 });
+              const c = document.createElement("canvas");
+              c.width = vp.width;
+              c.height = vp.height;
+              const ctx = c.getContext("2d");
+              if (!ctx) continue;
+              await page.render({ canvasContext: ctx, viewport: vp }).promise;
+              const imgUrl = c.toDataURL("image/jpeg", 0.7);
+              const result = await Tesseract.recognize(imgUrl, "chi_sim+eng");
+              if (result.data.text?.trim()) ocrTexts.push(result.data.text.trim());
+              setStatusMessage(`OCR ${i}/${total}`);
+            }
+            text = ocrTexts.join("\n\n").trim();
           }
         } else if (file.type.startsWith("image/") || file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i)) {
-          imageUrls.push(URL.createObjectURL(file));
+          setStatusMessage("正在 OCR 识别图片...");
+          const Tesseract = (await import("tesseract.js")).default;
+          const imgUrl = URL.createObjectURL(file);
+          try {
+            const result = await Tesseract.recognize(imgUrl, "chi_sim+eng");
+            text = result.data.text?.trim() || "";
+          } finally { URL.revokeObjectURL(imgUrl); }
         } else {
-          // PPTX etc — try server
           const fd = new FormData();
           fd.append("file", file);
           const sr = await fetch("/api/extract", { method: "POST", body: fd });
           if (sr.ok) {
             const d = await sr.json() as { sourceText?: string };
             if (d.sourceText) text = d.sourceText;
-          }
-        }
-
-        // OCR each rendered image
-        if (imageUrls.length > 0) {
-          const ocrTexts: string[] = [];
-          for (let i = 0; i < imageUrls.length; i++) {
-            const result = await Tesseract.recognize(imageUrls[i], "chi_sim+eng");
-            if (result.data.text?.trim()) ocrTexts.push(result.data.text.trim());
-            setStatusMessage(`OCR 识别中... ${i + 1}/${imageUrls.length}`);
-          }
-          text = ocrTexts.join("\n\n").trim();
-          for (const u of imageUrls) {
-            if (u.startsWith("blob:")) URL.revokeObjectURL(u);
           }
         }
       }
