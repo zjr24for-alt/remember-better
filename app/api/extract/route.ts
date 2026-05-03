@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { extractTextFromUploadedFile } from "@/lib/extract-text";
-
 export const runtime = "nodejs";
 
+// This route is called as a fallback when client-side extraction fails.
+// It tries the server-side extract library (which needs pdf-parse/jsZip).
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -13,7 +13,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "请先选择文件。" }, { status: 400 });
     }
 
+    // Dynamic import to avoid build-time dependency issues
+    const { extractTextFromUploadedFile } = await import("@/lib/extract-text");
     const extracted = await extractTextFromUploadedFile(file);
+
     if (!extracted.text.trim()) {
       return NextResponse.json(
         { error: "文件已读取，但没有提取到可用文本。" },
