@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 
+import { BirdView } from "@/components/bird-view";
 import { FloorPlan } from "@/components/floor-plan";
 import { RenderMath } from "@/components/render-math";
 
@@ -611,6 +612,15 @@ export function Workspace() {
                 <p className="mt-3 min-w-0 break-words text-sm leading-7 text-ink/72"><RenderMath text={draft.summary} /></p>
               </section>
 
+              <section id="section-bird" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/10 text-sm">🏗️</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">建筑俯视图</span>
+                </div>
+                <p className="mb-4 mt-1 text-xs leading-relaxed text-ink/40">空间区域的相对位置关系，方框为知识房间，虚线为穿行路径。</p>
+                <BirdView spatialMapMarkdown={draft.spatialMapMarkdown} title={draft.title} />
+              </section>
+
               <section id="section-flow" className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-ink/5">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/10 text-sm">🧭</span>
@@ -1015,6 +1025,7 @@ export function Workspace() {
         <div className="fixed right-4 top-1/2 z-40 -translate-y-1/2 space-y-1.5 hidden xl:block">
           {[
             { id: "section-flow", icon: "🧭", label: "交互地图" },
+            { id: "section-bird", icon: "🏗️", label: "俯视图" },
             { id: "section-spatial", icon: "🗺️", label: "空间预览" },
             { id: "section-narrative", icon: "🚶", label: "叙事路线" },
             { id: "section-concepts", icon: "🔗", label: "关键概念" },
