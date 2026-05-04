@@ -568,7 +568,7 @@ export function Workspace() {
           ) : null}
         </div>
 
-        <div className="space-y-4 overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-b from-[#fdfbf7] to-[#f6f2e6] p-5 shadow-lg shadow-ink/5 md:p-6">
+        <div id="preview-panel" className="space-y-4 overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-b from-[#fdfbf7] to-[#f6f2e6] p-5 shadow-lg shadow-ink/5 md:p-6">
           <div className="flex items-center justify-between border-b border-fog/40 pb-4">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-lg">✨</span>
@@ -1020,15 +1020,15 @@ export function Workspace() {
             { id: "section-concepts", icon: "🔗", label: "关键概念" },
             { id: "section-diagram", icon: "🗂️", label: "结构图" },
             { id: "section-floorplan", icon: "🏛️", label: "平面图" },
-            { id: "workspace", icon: "⛶", label: "全屏预览" },
+            { id: "preview-panel", icon: "⛶", label: "全屏预览" },
           ].map(({ id, icon, label }) => (
             <a
               key={id}
               href={"#" + id}
               onClick={(e) => {
                 e.preventDefault();
-                if (id === "workspace") {
-                  const el = document.getElementById("workspace");
+                if (id === "preview-panel") {
+                  const el = document.getElementById("preview-panel");
                   el?.scrollIntoView({ behavior: "smooth", block: "center" });
                 } else {
                   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
