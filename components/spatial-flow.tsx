@@ -26,11 +26,28 @@ type ZoneData = {
   items: string[];
 };
 
+function stripLatex(text: string): string {
+  return text
+    .replace(/\$\$[^$]+\$\$/g, "")
+    .replace(/\$[^$]+\$/g, "")
+    .replace(/\\mathrm\{([^}]+)\}/g, "$1")
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "$1/$2")
+    .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
+    .replace(/\\times/g, "×").replace(/\\cdot/g, "·").replace(/\\rightarrow/g, "→")
+    .replace(/\\alpha/g, "α").replace(/\\beta/g, "β").replace(/\\gamma/g, "γ")
+    .replace(/\\delta/g, "Δ").replace(/\\pi/g, "π").replace(/\\sigma/g, "σ")
+    .replace(/\\theta/g, "θ").replace(/\\omega/g, "ω").replace(/\\infty/g, "∞")
+    .replace(/\\sum_/g, "Σ").replace(/\\prod_/g, "Π")
+    .replace(/\^\{([^}]+)\}/g, "^$1").replace(/\_\{([^}]+)\}/g, "_$1")
+    .replace(/[{}]/g, "").replace(/\s+/g, " ").trim();
+}
+
 function smartTruncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
+  const t = stripLatex(text);
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
   const lastPeriod = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("，"), cut.lastIndexOf("、"), cut.lastIndexOf("；"), cut.lastIndexOf(" "));
-  if (lastPeriod > max * 0.5) return text.slice(0, lastPeriod + 1) + "…";
+  if (lastPeriod > max * 0.5) return t.slice(0, lastPeriod + 1) + "…";
   return cut + "…";
 }
 
