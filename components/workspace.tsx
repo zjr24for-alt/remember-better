@@ -22,13 +22,6 @@ type SpatialSection = {
   items: string[];
 };
 
-type ExtractResponse = {
-  sourceText: string;
-  detectedType: "pdf" | "pptx" | "ppt";
-  fileName: string;
-  error?: string;
-};
-
 const HISTORY_STORAGE_KEY = "remember-better.history";
 
 const uiText = {
@@ -247,6 +240,7 @@ export function Workspace() {
         setActiveHistoryId(saved.id);
         setImageUrl(null);
         setImageError(null);
+        setImageProvider(null);
         setHistory((current) => [saved, ...current].slice(0, 8));
         setStatusMessage(uiText.generatedLocal);
       } catch (caughtError) {
