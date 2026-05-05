@@ -1078,8 +1078,8 @@ export function Workspace() {
                 <span className="text-lg">🧠</span>
                 <span className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{uiText.currentVersion}</span>
               </div>
-              <h4 className="mt-1 font-display text-3xl leading-tight text-ink">{draft.title}</h4>
-              <p className="mt-4 text-base leading-8 text-ink/72">{draft.summary}</p>
+              <h4 className="mt-1 min-w-0 break-words font-display text-3xl leading-tight text-ink"><RenderMath text={draft.title} /></h4>
+              <p className="mt-4 min-w-0 break-words text-base leading-8 text-ink/72"><RenderMath text={draft.summary} /></p>
             </section>
 
             <section className="rounded-[1.5rem] bg-white p-6">
@@ -1119,7 +1119,7 @@ export function Workspace() {
                       {index + 1}
                     </span>
                     <div className="rounded-[1rem] border border-fog/60 bg-gradient-to-br from-white to-paper/80 px-5 py-4 shadow-sm">
-                      <p className="text-base leading-8 text-ink/78">{step}</p>
+                      <p className="text-base leading-8 text-ink/78"><RenderMath text={step} /></p>
                     </div>
                   </div>
                 ))}
@@ -1139,11 +1139,11 @@ export function Workspace() {
                     <article key={`full-${item.name}-${index}`} className="overflow-hidden rounded-[1rem] border border-fog/60 bg-gradient-to-b from-white to-paper/60 shadow-sm">
                       <div className={"h-0.5 w-full " + accentBar[ci]} />
                       <div className="px-5 py-4">
-                        <h5 className="font-semibold text-ink text-lg">{item.name}</h5>
+                        <h5 className="min-w-0 break-words font-semibold text-ink text-lg"><RenderMath text={item.name} /></h5>
                         <span className={"mt-1.5 inline-block rounded-full px-3 py-0.5 text-xs font-semibold " + tagStyle[ci]}>
-                          {item.relation}
+                          <RenderMath text={item.relation} />
                         </span>
-                        <p className="mt-3 text-base leading-8 text-ink/72">{item.description}</p>
+                        <p className="mt-3 min-w-0 break-words text-base leading-8 text-ink/72"><RenderMath text={item.description} /></p>
                       </div>
                     </article>
                   );
