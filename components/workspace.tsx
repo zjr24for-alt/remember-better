@@ -173,6 +173,7 @@ export function Workspace() {
   const [profileType, setProfileType] = useState<MemoryProfileType>("spatial");
   const [showAssessment, setShowAssessment] = useState(false);
   const [isCleaningText, setIsCleaningText] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -499,9 +500,23 @@ export function Workspace() {
 
           {sourceText.trim() && (
             <div className="rounded-[1.5rem] border border-fog/50 bg-gradient-to-b from-[#faf8f3] to-[#f5f1e8] p-5 shadow-sm ring-1 ring-ink/5">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-sm">📓</span>
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/50">NotebookLM 笔记视图</span>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-sm">📓</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/50">NotebookLM 笔记视图</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = sourceText.split(/\n\s*\n/).filter(p => p.trim()).map(p => p.trim().replace(/^#{1,3}\s*/, "")).join("\n\n");
+                    navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-fog/50 bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink/40 shadow-sm transition-all hover:border-accent/40 hover:text-accent"
+                >
+                  {copied ? "✓ 已复制" : "📋 复制"}
+                </button>
               </div>
               <div className="max-h-[240px] overflow-y-auto rounded-[1rem] border border-fog/30 bg-white/80 px-5 py-4 font-serif text-sm leading-8 text-ink/75">
                 {sourceText.split(/\n\s*\n/).filter(p => p.trim()).map((para, i) => {
